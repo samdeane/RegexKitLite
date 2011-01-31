@@ -1167,7 +1167,7 @@ static id rkl_performRegexOp(id self, SEL _cmd, RKLRegexOp regexOp, NSString *re
   
 exitNow:
   OSSpinLockUnlock(&rkl_cacheSpinLock);
-  rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock; // Warning about rkl_cacheSpinLockStatus never being read can be safely ignored.
+  rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock;  (void) rkl_cacheSpinLockStatus; /* suppress warning about stackSize */
   
   if(RKL_EXPECTED(status     > U_ZERO_ERROR, 0L) && RKL_EXPECTED(exception == NULL, 0L)) { exception = rkl_NSExceptionForRegex(regexString, options, NULL, status); } // If we had a problem, prepare an exception to be thrown.
   if(RKL_EXPECTED(exception != NULL,         0L))                                        { rkl_handleDelayedAssert(self, _cmd, exception);                          } // If there is an exception, throw it at this point.
@@ -1547,7 +1547,7 @@ static NSString *rkl_replaceString(RKLCachedRegex *cachedRegex, id searchString,
     // http://lists.apple.com/archives/Cocoa-dev/2010/Jan/msg01011.html
     needU16Capacity += 4;
     tempUniCharBufferSize = ((size_t)(tempUniCharBufferU16Capacity = needU16Capacity + 4) * sizeof(UniChar)); // Use needU16Capacity. Bug 2890810.
-    if((stackSize + tempUniCharBufferSize) < (size_t)_RKL_STACK_LIMIT) { if(RKL_EXPECTED((tempUniCharBuffer = (RKL_STRONG_REF UniChar * RKL_GC_VOLATILE)alloca(tempUniCharBufferSize))                                  == NULL, 0L)) { goto exitNow; } stackSize += tempUniCharBufferSize; } // Warning about stackSize can be safely ignored.
+	  if((stackSize + tempUniCharBufferSize) < (size_t)_RKL_STACK_LIMIT) { if(RKL_EXPECTED((tempUniCharBuffer = (RKL_STRONG_REF UniChar * RKL_GC_VOLATILE)alloca(tempUniCharBufferSize))                                  == NULL, 0L)) { goto exitNow; } stackSize += tempUniCharBufferSize; (void) stackSize; /* suppress warning about stackSize */ } 
     else                                                               { if(RKL_EXPECTED((tempUniCharBuffer = (RKL_STRONG_REF UniChar * RKL_GC_VOLATILE)rkl_realloc(&rkl_scratchBuffer[0], tempUniCharBufferSize, 0UL)) == NULL, 0L)) { goto exitNow; } }
     
     *status         = U_ZERO_ERROR; // Make sure the status var is cleared and try again.
@@ -1653,7 +1653,7 @@ static NSUInteger rkl_isRegexValid(id self, SEL _cmd, NSString *regex, RKLRegexO
   if(RKL_EXPECTED((cachedRegex = rkl_getCachedRegex(regex, options, error, &exception)) != NULL, 1L)) { gotCachedRegex = 1UL; captureCount = cachedRegex->captureCount; }
   cachedRegex = NULL;
   OSSpinLockUnlock(&rkl_cacheSpinLock);
-  rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock; // Warning about rkl_cacheSpinLockStatus never being read can be safely ignored.
+  rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock; (void) rkl_cacheSpinLockStatus; /* suppress warning about stackSize */ 
   
   if(captureCountPtr != NULL) { *captureCountPtr = captureCount; }
   if(RKL_EXPECTED(exception != NULL, 0L)) { rkl_handleDelayedAssert(self, _cmd, exception); }
@@ -1848,7 +1848,7 @@ static id rkl_performEnumerationUsingBlock(id self, SEL _cmd,
 exitNow:
   if((rkl_cacheSpinLockStatus & RKLLockedCacheSpinLock) != 0UL) { // In case we arrive at exitNow: without obtaining the rkl_cacheSpinLock.
     OSSpinLockUnlock(&rkl_cacheSpinLock);
-    rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock; // Warning about rkl_cacheSpinLockStatus never being read can be safely ignored.
+    rkl_cacheSpinLockStatus |= RKLUnlockedCacheSpinLock; (void) rkl_cacheSpinLockStatus; /* suppress warning about stackSize */ 
   }
 
   if(RKL_EXPECTED(self == NULL, 0L) || RKL_EXPECTED(retrievedCachedRegex == NULL, 0L) || RKL_EXPECTED(cachedRegex.icu_regex == NULL, 0L) || RKL_EXPECTED(status != U_ZERO_ERROR, 0L) || RKL_EXPECTED(exception != NULL, 0L)) { goto errorExit; }
