@@ -71,6 +71,89 @@
 
 #import "RegexKitLite.h"
 
+// Clang Static Analyser Support
+// (note from Sam Deane, 2011/03/06)
+//
+// These attributes are supposed to be supported by the Clang analyser, but as yet they
+// don't seem to be.
+//
+// They should allow us to suppress some warnings that the analyser throws up, which appear to be
+// false positives.
+//
+// For now, these are instead suppressed with #ifndef __clang_analyzer__
+//
+// References:
+// http://clang-analyzer.llvm.org/annotations.html
+// http://clang.llvm.org/docs/LanguageExtensions.html
+
+#ifndef __has_feature      // Optional.
+#define __has_feature(x) 0 // Compatibility with non-clang compilers.
+#endif
+
+#ifndef CF_CONSUMED
+#if __has_feature(attribute_cf_consumed)
+#define CF_CONSUMED __attribute__((cf_consumed))
+#else
+#define CF_CONSUMED
+#endif
+#endif
+
+#ifndef NS_RETURNS_RETAINED
+#if __has_feature(attribute_ns_returns_retained)
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#else
+#define NS_RETURNS_RETAINED
+#endif
+#endif
+
+#ifndef NS_RETURNS_NOT_RETAINED
+#if __has_feature(attribute_ns_returns_not_retained)
+#define NS_RETURNS_NOT_RETAINED __attribute__((ns_returns_not_retained))
+#else
+#define NS_RETURNS_NOT_RETAINED
+#endif
+#endif
+
+#ifndef CF_RETURNS_RETAINED
+#if __has_feature(attribute_cf_returns_retained)
+#define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+#else
+#define CF_RETURNS_RETAINED
+#endif
+#endif
+
+#ifndef CF_RETURNS_NOT_RETAINED
+#if __has_feature(attribute_cf_returns_not_retained)
+#define CF_RETURNS_NOT_RETAINED __attribute__((cf_returns_not_retained))
+#else
+#define CF_RETURNS_NOT_RETAINED
+#endif
+#endif
+
+#ifndef NS_CONSUMED
+#if __has_feature(attribute_ns_consumed)
+#define NS_CONSUMED __attribute__((ns_consumed))
+#else
+#define NS_CONSUMED
+#endif
+#endif
+
+#ifndef CF_CONSUMED
+#if __has_feature(attribute_cf_consumed)
+#define CF_CONSUMED __attribute__((cf_consumed))
+#else
+#define CF_CONSUMED
+#endif
+#endif
+
+#ifndef NS_CONSUMES_SELF
+#if __has_feature(attribute_ns_consumes_self)
+#define NS_CONSUMES_SELF __attribute__((ns_consumes_self))
+#else
+#define NS_CONSUMES_SELF
+#endif
+#endif
+
 // If the gcc flag -mmacosx-version-min is used with, for example, '=10.2', give a warning that the libicucore.dylib is only available on >= 10.3.
 // If you are reading this comment because of this warning, this is to let you know that linking to /usr/lib/libicucore.dylib will cause your executable to fail on < 10.3.
 // You will need to build your own version of the ICU library and link to that in order for RegexKitLite to work successfully on < 10.3.  This is not simple.
@@ -483,7 +566,7 @@ enum { RKLScannedOption = 0 };
 
 RKL_STATIC_INLINE void *rkl_realloc                   (void **ptr, size_t size, NSUInteger flags) RKL_ALLOC_SIZE_NON_NULL_ARGS_WARN_UNUSED(2,1);
 RKL_STATIC_INLINE void *rkl_free                      (void **ptr)                                RKL_NONNULL_ARGS(1);
-RKL_STATIC_INLINE id    rkl_CFAutorelease             (CFTypeRef obj)                 RKL_WARN_UNUSED_NONNULL_ARGS(1);
+RKL_STATIC_INLINE id    rkl_CFAutorelease             (CFTypeRef CF_CONSUMED obj)                 RKL_WARN_UNUSED_NONNULL_ARGS(1);
 RKL_STATIC_INLINE id    rkl_CreateAutoreleasedArray   (void **objects, NSUInteger count)          RKL_WARN_UNUSED_NONNULL_ARGS(1);
 RKL_STATIC_INLINE id    rkl_CreateArrayWithObjects    (void **objects, NSUInteger count)          RKL_WARN_UNUSED_NONNULL_ARGS(1);
 RKL_STATIC_INLINE id    rkl_CreateStringWithSubstring (id string, NSRange range)                  RKL_WARN_UNUSED_NONNULL_ARGS(1);
@@ -491,7 +574,7 @@ RKL_STATIC_INLINE id    rkl_ReleaseObject             (id obj)                  
 
 RKL_STATIC_INLINE void *rkl_realloc                   (void **ptr, size_t size, NSUInteger flags RKL_UNUSED_ARG) { return((*ptr = reallocf(*ptr, size))); }
 RKL_STATIC_INLINE void *rkl_free                      (void **ptr)                                               { if(*ptr != NULL) { free(*ptr); *ptr = NULL; } return(NULL); }
-RKL_STATIC_INLINE id    rkl_CFAutorelease             (CFTypeRef obj)                                              { return([(id)obj autorelease]); }
+RKL_STATIC_INLINE id    rkl_CFAutorelease             (CFTypeRef CF_CONSUMED obj)                                              { return([(id)obj autorelease]); }
 RKL_STATIC_INLINE id    rkl_CreateArrayWithObjects    (void **objects, NSUInteger count)                         { return((id)CFArrayCreate(NULL, (const void **)objects, (CFIndex)count, &rkl_transferOwnershipArrayCallBacks)); }
 RKL_STATIC_INLINE id    rkl_CreateAutoreleasedArray   (void **objects, NSUInteger count)                         { return(rkl_CFAutorelease(rkl_CreateArrayWithObjects(objects, count))); }
 RKL_STATIC_INLINE id    rkl_CreateStringWithSubstring (id string, NSRange range)                                 { return((id)CFStringCreateWithSubstring(NULL, (CFStringRef)string, CFMakeRange((CFIndex)range.location, (CFIndex)range.length))); }
@@ -1430,6 +1513,7 @@ exitNow:
 #pragma mark Convert bulk results from rkl_findRanges in to various NSDictionary types
 
 static id rkl_makeDictionary(RKLCachedRegex *cachedRegex, RKLRegexOp regexOp, RKLFindAll *findAll, NSUInteger captureKeysCount, id captureKeys[captureKeysCount], const int captureKeyIndexes[captureKeysCount], id *exception RKL_UNUSED_ASSERTION_ARG) {
+#ifndef __clang_analyzer__
   NSUInteger                      matchedStringIndex  = 0UL, createdStringsCount = 0UL, createdDictionariesCount = 0UL, matchedDictionariesCount = (findAll->found / (cachedRegex->captureCount + 1UL)), transferredDictionariesCount = 0UL;
   id           *  RKL_GC_VOLATILE matchedStrings      = NULL, * RKL_GC_VOLATILE matchedKeys = NULL, emptyString = @"";
   id              RKL_GC_VOLATILE returnObject        = NULL;
@@ -1497,6 +1581,7 @@ exitNow2:
   }
   
   return(returnObject);
+#endif
 }
 
 //  IMPORTANT!   This code is critical path code.  Because of this, it has been written for speed, not clarity.
@@ -1506,6 +1591,7 @@ exitNow2:
 #pragma mark Perform "search and replace" operations on strings using ICUs uregex_*replace* functions
 
 static NSString *rkl_replaceString(RKLCachedRegex *cachedRegex, id searchString, NSUInteger searchU16Length, NSString *replacementString, NSUInteger replacementU16Length, NSInteger *replacedCountPtr, NSUInteger replaceMutable, id *exception, int32_t *status) {
+#ifndef __clang_analyzer__
   RKL_STRONG_REF UniChar       * RKL_GC_VOLATILE tempUniCharBuffer  = NULL;
   RKL_STRONG_REF const UniChar * RKL_GC_VOLATILE replacementUniChar = NULL;
   uint64_t           searchU16Length64  = (uint64_t)searchU16Length, replacementU16Length64 = (uint64_t)replacementU16Length;
@@ -1583,6 +1669,7 @@ exitNow:
   if(rkl_scratchBuffer[1] != NULL) { rkl_scratchBuffer[1] = rkl_free(&rkl_scratchBuffer[1]); }
   if(replacedCountPtr     != NULL) { *replacedCountPtr    = replacedCount;                   }
   return(resultObject);
+#endif
 } // The two warnings about potential leaks can be safely ignored.
 
 //  IMPORTANT!   Should only be called from rkl_replaceString().
@@ -1974,6 +2061,7 @@ static id rkl_performEnumerationUsingBlock(id self, SEL _cmd,
                                            NSError **error,
                                            void (^stringsAndRangesBlock)(NSInteger capturedCount, NSString * const capturedStrings[capturedCount], const NSRange capturedStringRanges[capturedCount], volatile BOOL * const stop),
                                            NSString *(^replaceStringsAndRangesBlock)(NSInteger capturedCount, NSString * const capturedStrings[capturedCount], const NSRange capturedStringRanges[capturedCount], volatile BOOL * const stop)) {
+#ifndef __clang_analyzer__
   NSMutableArray            * RKL_GC_VOLATILE autoreleaseArray              = NULL;
   RKLBlockEnumerationHelper * RKL_GC_VOLATILE blockEnumerationHelper        = NULL;
   NSMutableString           * RKL_GC_VOLATILE mutableReplacementString      = NULL;
@@ -2165,6 +2253,7 @@ exitNow2:
   if(replacedCountPtr != NULL) { *replacedCountPtr = replacedCount; }
   if(errorFreePtr     != NULL) { *errorFreePtr     = errorFree;     }
   return(returnObject);
+#endif
 } // The two warnings about potential leaks can be safely ignored.
 
 #endif // _RKL_BLOCKS_ENABLED
